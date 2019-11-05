@@ -1,0 +1,38 @@
+{
+    "title": "Input schema for Glassdoor jobs actor",
+    "type": "object",
+    "schemaVersion": 1,
+    "properties": {
+        "query": {
+            "title": "Query",
+            "type": "string",
+            "description": "Job Title, Keywords, or Company",
+            "editor": "textfield"
+        },
+        "category": {
+            "title": "Category",
+            "type": "string",
+            "description": "Jobs, Companies, Salaries, Interviews",
+            "prefill": "Jobs",
+            "enum": [
+                "Jobs",
+                "Companies"
+            ],
+            "editor": "select"
+        },
+        "location": {
+            "title": "Location",
+            "type": "string",
+            "description": "City, state, or zip code",
+            "prefill": "",
+            "editor": "textfield"
+        },
+        "maxResults": {
+            "title": "Maximum results",
+            "type": "integer",
+            "description": "Limit number of results",
+            "minimum": 0
+        }
+   },
+    "required": ["query"]
+}
