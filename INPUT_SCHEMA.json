@@ -12,7 +12,7 @@
         "category": {
             "title": "Category",
             "type": "string",
-            "description": "Jobs, Companies, Salaries, Interviews",
+            "description": "Jobs or Companies",
             "prefill": "Jobs",
             "enum": [
                 "Jobs",
