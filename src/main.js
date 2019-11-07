@@ -176,7 +176,7 @@ Apify.main(async () => {
                     log.error(`- not found review listing id ${request.uniqueKey} in search results`);
                     return;
                 }
-                const jobList = $('div.JobsListItemStyles__jobDetailsContainer').get().slice(0, 10);
+                const jobList = $('div.JobsListItemStyles__jobDetailsContainer').get().slice(0, 3);
                 log.info(`Preparing ${jobList.length} job(s) for company ${request.url}`);
                 for (const el of jobList) {
                     const jobLink = $('.JobDetailsStyles__jobTitle', el);
