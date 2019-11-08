@@ -11,7 +11,9 @@ Apify.main(async () => {
     // global variable for loaded cheerio content to keep jQuery-alike syntax
     let $;
 
-    const entities = new Entities(); // encoding-decoding html entities
+    // encoding-decoding html entities
+    // used to get jobDetails from JSON-LD instead of page content
+    const entities = new Entities();
 
     const input = await Apify.getInput();
     const proxy = Apify.getApifyProxyUrl();
@@ -19,8 +21,8 @@ Apify.main(async () => {
         transform: (body) => {
             return cheerio.load(body);
         },
-        proxy,
         ...REQUEST_HEADERS,
+        proxy,
     };
 
     if (!input || !input.query) {
@@ -41,8 +43,8 @@ Apify.main(async () => {
         const locations = await requestPromise({
             uri: new URL(`/findPopularLocationAjax.htm?term=${input.location}&maxLocationsToReturn=1`, BASE_URL),
             json: true,
-            proxy,
             ...REQUEST_HEADERS,
+            proxy,
         });
         if (locations.length > 0) {
             // expected output format
@@ -113,7 +115,7 @@ Apify.main(async () => {
     * Get search results first
     * then crawl subpages to get details
     */
-    const searchResults = [];
+    let searchResults = [];
     const reviewResults = [];
     // if no limit for results, then parse it from the initial search
     let maximumResults = maxResults > 0 ? maxResults : -1;
@@ -160,15 +162,20 @@ Apify.main(async () => {
         } while (nextPageUrl && savedItems < maximumResults);
 
         // crawl company reviews to get jobs
+        // phase 1 - getting jobs from Jobs tab of company pages
+        // save job listing id and url in searchResults
+        // excpected patter for produced urls is
+        // eslint-disable-next-line max-len
+        // /partner/jobListing.htm?pos=101&ao=192357&s=21&guid=0000016e49ba886daefd02a1638a7892&src=GD_JOB_AD&ei=868966&t=ESR&extid=2&exst=E&ist=L&ast=EL&vt=w&slr=true&cs=1_6b5d487e&cb=1573194992086&jobListingId=3026368183&rdserp=true
         const requestList = new Apify.RequestList({
-            sources: reviewResults.map(x => ({ url: BASE_URL + x.url, uniqueKey: x.id.toString() })),
+            sources: reviewResults.map(x => ({ url: x.url, uniqueKey: x.id.toString() })),
         });
         await requestList.initialize();
-        const crawlerJobs = new Apify.BasicCrawler({
+        const crawlerJobs1 = new Apify.BasicCrawler({
             requestList,
             handleRequestFunction: async ({ request }) => {
                 $ = await requestPromise({
-                    url: request.url,
+                    url: new URL(request.url, BASE_URL),
                     ...optionsCheerio,
                 });
                 const updatedItem = reviewResults.find(x => x.id === parseInt(request.uniqueKey, 10));
@@ -176,7 +183,7 @@ Apify.main(async () => {
                     log.error(`- not found review listing id ${request.uniqueKey} in search results`);
                     return;
                 }
-                const jobList = $('div.JobsListItemStyles__jobDetailsContainer').get().slice(0, 3);
+                const jobList = $('div.JobsListItemStyles__jobDetailsContainer').get();
                 log.info(`Preparing ${jobList.length} job(s) for company ${request.url}`);
                 for (const el of jobList) {
                     const jobLink = $('.JobDetailsStyles__jobTitle', el);
@@ -184,7 +191,7 @@ Apify.main(async () => {
                         log.error('- no job link element');
                         break;
                     }
-                    const jobText = $('.JobDetailsStyles__iconLink', el).text();
+                    const jobText = jobLink.text(); // $('.JobDetailsStyles__iconLink', el).text();
                     const jobRef = jobLink.attr('href');
                     let jobId = jobRef.match(/jobListingId=([^&]+)/);
                     if (!jobRef || !jobId) {
@@ -192,38 +199,63 @@ Apify.main(async () => {
                         break;
                     }
                     jobId = parseInt(jobId[1], 10);
-                    // IMPORTANT - need one more call to get direct job link
-                    // jobLink.attr('href') leads to another job list with preselected item
-                    const listPageUrl = BASE_URL + jobRef;
-                    log.info(`parsing ${listPageUrl}`);
-                    const page2 = await requestPromise({
-                        url: listPageUrl,
-                        ...optionsCheerio,
-                    });
-                    rawdata = page2('script[type="application/ld+json"]').html();
-                    json = JSON.parse(rawdata);
-                    if (!json && !json.itemListElement) {
-                        log.error('- jobs list not found!');
-                        break;
-                    }
-                    const jobItem = json.itemListElement[0];
-                    if (jobItem) {
-                        // transform to the same data object as we getting from job search results
-                        const jobResult = {
-                            ...updatedItem,
-                            id: jobId,
-                            url: jobItem.url,
-                            jobTitle: jobText,
-                        };
-                        searchResults.push(jobResult);
-                        log.info(`set to reparse from ${jobItem.url}`);
-                    } else {
-                        log.error('Job item not found!');
-                    }
+                    const jobResult = {
+                        ...updatedItem,
+                        id: jobId,
+                        url: jobRef,
+                        jobTitle: jobText,
+                    };
+                    searchResults.push(jobResult);
                 }
             },
         });
-        await crawlerJobs.run();
+        await crawlerJobs1.run();
+        log.info(`Found ${searchResults.length} jobs in ${reviewResults.length} company reviews`);
+        // phase 2 - reparse searchResults to get direct link to job listing so from link to table view like this:
+        // eslint-disable-next-line max-len
+        // /partner/jobListing.htm?pos=101&ao=192357&s=21&guid=0000016e49ba886daefd02a1638a7892&src=GD_JOB_AD&ei=868966&t=ESR&extid=2&exst=E&ist=L&ast=EL&vt=w&slr=true&cs=1_6b5d487e&cb=1573194992086&jobListingId=3026368183&rdserp=true
+        // we getting direct link like this:
+        // eslint-disable-next-line max-len
+        // /partner/jobListing.htm?pos=101&ao=192357&s=21&guid=0000016e49ba886daefd02a1638a7892&src=GD_JOB_AD&t=SR&extid=1&exst=OL&ist=&ast=OL&vt=w&slr=true&cs=1_6b5d487e&cb=1573195025827&jobListingId=3026368183
+        // and saving it in searchResults
+        // TODO - patterns have similarity, might be possible to craft second link from first without doing actual call to the server
+        const requestList2 = new Apify.RequestList({
+            sources: searchResults.map(x => ({ url: BASE_URL + x.url, uniqueKey: x.id.toString() })),
+        });
+        await requestList2.initialize();
+        const crawlerJobs2 = new Apify.BasicCrawler({
+            requestList: requestList2,
+            handleRequestFunction: async ({ request }) => {
+                $ = await requestPromise({
+                    url: request.url,
+                    ...optionsCheerio,
+                });
+                // at this point we have from server jobs list page with original job selected
+                const updatedItem = searchResults.find(x => x.id === parseInt(request.uniqueKey, 10));
+                if (!updatedItem) {
+                    log.error(`- not found review listing id ${request.uniqueKey} in search results`);
+                    return;
+                }
+                let jobItem = $('li.jl.selected a').attr('href');
+                if (!jobItem) {
+                    // this means only one item in the list, so its not "selected"
+                    jobItem = $('li.jl a').attr('href');
+                }
+                if (jobItem) {
+                    log.info(`Reparsed url ${updatedItem.url} to ${jobItem}`);
+                    updatedItem.url = BASE_URL + jobItem;
+                } else {
+                    searchResults = searchResults.filter(x => x.id.toString() !== request.uniqueKey);
+                    log.error(`Job item ${request.uniqueKey} not found at ${request.url}`);
+                    await Apify.pushData({
+                        '#isFailed': true,
+                        '#debug': Apify.utils.createRequestDebugInfo(request),
+                        '#html': $.html(),
+                    });
+                }
+            },
+        });
+        await crawlerJobs2.run();
     } else { // input.category === 'Jobs'
         do {
             try {
@@ -301,14 +333,18 @@ Apify.main(async () => {
             }
 
             // remove html formatting from job description
-            let clearDetails = json.description;
-            try {
-                clearDetails = entities.decode(clearDetails); // this will transform html decoded content to plain html
-                clearDetails = $(clearDetails).text(); // then we create html from content and getting it as plain text
-            } catch (err) {
-                log.error(err);
+            // for whatever reason div below sometimes available, sometimes not
+            let clearDetails = $('#JobDescriptionContainer').text().trim(); // but no artifacts from html decoding here
+            if (!clearDetails) {
+                // so for now second option will be used as jobDetails, decoding below was for json.description
+                clearDetails = json.description; // html encoded, decoding is not 99% accurate
+                try {
+                    clearDetails = entities.decode(clearDetails); // this will transform html decoded content to plain html
+                    clearDetails = $(clearDetails).text(); // then we create html from content and getting it as plain text
+                } catch (err) {
+                    log.error(err);
+                }
             }
-
             // get employer id, check if we have cached overview
             const eid = $('#EmpHero').data('employer-id');
             let moreDetails = companyDetails[eid];
