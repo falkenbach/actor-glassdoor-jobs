@@ -93,3 +93,35 @@ The structure of each job item in output looks like below, please note that jobD
 }
 
 ```
+
+### CU usage examples
+
+```json
+{
+  "query": "web",
+  "category": "Companies",
+  "location": "Prague",
+  "maxResults": 20
+}
+```
+Compute units​ 0.2021
+
+| | Average | Max |
+| ----- | ---- | ----------- |
+| Memory | 152.3 MB	| 241 MB |
+| CPU | 6%	 | 65% |
+
+```json
+{
+  "query": "project manager",
+  "category": "Jobs",
+  "location": "Prague",
+  "maxResults": 50
+}
+```
+Compute units​ 0.1341
+
+| | Average | Max |
+| ----- | ---- | ----------- |
+| Memory | 144.6 MB | 215.8 MB |
+| CPU | 4%	 | 38% |
