@@ -27,6 +27,8 @@ Apify.main(async () => {
     // location is optional, if specified we need to get available options from location search
     if (input.location && typeof input.location === 'string') {
         input.location = await findGlassdoorLocation(input.location, proxy);
+    } else {
+        input.location = '';
     }
 
     const headersCheerio = {
