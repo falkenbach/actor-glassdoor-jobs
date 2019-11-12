@@ -25,10 +25,8 @@ Apify.main(async () => {
         maxResults = parseInt(input.maxResults, 10);
     }
     // location is optional, if specified we need to get available options from location search
-    if (typeof input.location === 'string') {
+    if (input.location && typeof input.location === 'string') {
         input.location = await findGlassdoorLocation(input.location, proxy);
-    } else {
-        throw new Error(`Incorrect locations value ${input.location}`);
     }
 
     const headersCheerio = {

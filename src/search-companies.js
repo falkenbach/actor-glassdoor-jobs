@@ -37,9 +37,9 @@ const searchCompanies = async (query, location, maxResults, searchEndpoint, head
     let searchResults = [];
     // if no limit for results, then parse it from the initial search
     let maximumResults = maxResults > 0 ? maxResults : -1;
-    const searchUrl = new URL(nextPageUrl, BASE_URL);
 
     do {
+        const searchUrl = new URL(nextPageUrl, BASE_URL);
         try {
             log.info(`GET ${searchUrl}`);
             $ = await requestPromise({
