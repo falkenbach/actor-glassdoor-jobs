@@ -10,10 +10,10 @@ const { searchCompanies } = require('./search-companies');
 const { parseJobs } = require('./parse-jobs');
 
 Apify.main(async () => {
-    const proxy = (input.proxy && typeof input.proxy === 'string') ? input.proxy : Apify.getApifyProxyUrl();
-
     log.info('INPUT Validation');
     const input = await Apify.getInput();
+    const proxy = (input.proxy && typeof input.proxy === 'string') ? input.proxy : Apify.getApifyProxyUrl();
+
     if (!input || !input.query || typeof input.query !== 'string') {
         throw new Error('INPUT must contain query string');
     }
