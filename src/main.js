@@ -10,7 +10,7 @@ const { searchCompanies } = require('./search-companies');
 const { parseJobs } = require('./parse-jobs');
 
 Apify.main(async () => {
-    const proxy = Apify.getApifyProxyUrl();
+    const proxy = (input.proxy && typeof input.proxy === 'string') ? input.proxy : Apify.getApifyProxyUrl();
 
     log.info('INPUT Validation');
     const input = await Apify.getInput();
@@ -26,7 +26,7 @@ Apify.main(async () => {
     }
     // location is optional, if specified we need to get available options from location search
     if (input.location && typeof input.location === 'string') {
-        input.location = await findGlassdoorLocation(input.location, proxy);
+        input.location = await findGlassdoorLocation(input.location, input.locationstate, proxy);
     } else {
         input.location = '';
     }
