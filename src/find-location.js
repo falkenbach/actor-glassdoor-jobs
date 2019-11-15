@@ -25,6 +25,7 @@ const findGlassdoorLocation = async (locationText, locationState, proxy) => {
         // there is no separate value for state, instead state is the part of longName i.e.
         // "Yorktown, VA (US)"
         if (locationState && typeof locationState === 'string') {
+            locationState = locationState.toUpperCase();
             locIndex = locations.findIndex(x => x.longName.includes(`, ${locationState} (`));
         }
         const foundLocation = locations[locIndex >= 0 ? locIndex : 0];
