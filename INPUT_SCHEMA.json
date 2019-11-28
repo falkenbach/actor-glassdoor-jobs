@@ -41,11 +41,11 @@
             "minimum": 0
         },
         "proxy": {
-            "title": "Proxy URL",
-            "type": "string",
-            "description": "Custom proxy URL, if not specified then Apify.getApifyProxyUrl() will be used",
-            "prefill": "",
-            "editor": "textfield",
+            "title": "Proxy configuration",
+            "type": "object",
+            "description": "Select proxies to be used by your crawler.",
+            "prefill": { "useApifyProxy": true },
+            "editor": "proxy",
             "sectionCaption": "Advanced settings"
         }
    },

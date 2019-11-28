@@ -1,5 +1,5 @@
 const Apify = require('apify');
-const cheerio = require('cheerio');
+// const cheerio = require('cheerio');
 
 const { log } = Apify.utils;
 
@@ -12,7 +12,16 @@ const { parseJobs } = require('./parse-jobs');
 Apify.main(async () => {
     log.info('INPUT Validation');
     const input = await Apify.getInput();
-    const proxy = (input.proxy && typeof input.proxy === 'string') ? input.proxy : Apify.getApifyProxyUrl();
+    let proxy = Apify.getApifyProxyUrl();
+    // if proxy object specified need to convert it to relevant string
+    if (input.proxy) {
+        if (input.proxy.useApifyProxy) {
+            proxy = Apify.getApifyProxyUrl({ groups: input.proxy.apifyProxyGroups });
+        } else if (input.proxy.proxyUrls && input.proxy.proxyUrls.length > 0) {
+            // eslint-disable-next-line prefer-destructuring
+            proxy = input.proxy.proxyUrls[0];
+        }
+    }
 
     if (!input || !input.query || typeof input.query !== 'string') {
         throw new Error('INPUT must contain query string');
@@ -32,11 +41,13 @@ Apify.main(async () => {
     }
 
     const headersCheerio = {
+        /*
         transform: (body) => {
             return cheerio.load(body);
         },
+        */
+        proxyUrl: proxy,
         ...REQUEST_HEADERS,
-        proxy,
     };
 
     /*

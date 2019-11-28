@@ -1,5 +1,6 @@
 const Apify = require('apify');
-const requestPromise = require('request-promise');
+const httpRequest = require('@apify/http-request');
+const cheerio = require('cheerio');
 
 const { log } = Apify.utils;
 const { BASE_URL } = require('./consts');
@@ -38,10 +39,11 @@ const searchJobs = async (query, location, maxResults, searchEndpoint, headers) 
         const searchUrl = new URL(nextPageUrl, BASE_URL);
         try {
             log.info(`GET ${searchUrl}`);
-            $ = await requestPromise({
-                uri: searchUrl,
+            const rq = await httpRequest({
+                url: searchUrl.href,
                 ...headers,
             });
+            $ = cheerio.load(rq.body);
             if (maximumResults < 0) {
                 const cntStr = $('p.jobsCount').text().replace(',', '');
                 maximumResults = parseInt(cntStr, 10);

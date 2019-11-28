@@ -1,5 +1,6 @@
 const Apify = require('apify');
-const requestPromise = require('request-promise');
+const httpRequest = require('@apify/http-request');
+const cheerio = require('cheerio');
 
 const { log } = Apify.utils;
 const { BASE_URL } = require('./consts');
@@ -42,10 +43,11 @@ const searchCompanies = async (query, location, maxResults, searchEndpoint, head
         const searchUrl = new URL(nextPageUrl, BASE_URL);
         try {
             log.info(`GET ${searchUrl}`);
-            $ = await requestPromise({
-                uri: searchUrl,
+            const rq = await httpRequest({
+                url: searchUrl.href,
                 ...headers,
             });
+            $ = cheerio.load(rq.body);
             if (maximumResults < 0) {
                 const cntStr = $('strong', 'div.count.margBot.floatLt.tightBot').last().text().replace(',', '');
                 maximumResults = parseInt(cntStr, 10);
@@ -95,10 +97,12 @@ const searchCompanies = async (query, location, maxResults, searchEndpoint, head
     const crawlerJobs1 = new Apify.BasicCrawler({
         requestList,
         handleRequestFunction: async ({ request }) => {
-            $ = await requestPromise({
-                url: new URL(request.url, BASE_URL),
+            const newUrl = new URL(request.url, BASE_URL);
+            const rq = await httpRequest({
+                url: newUrl.href,
                 ...headers,
             });
+            $ = cheerio.load(rq.body);
             const updatedItem = reviewResults.find(x => x.id === parseInt(request.uniqueKey, 10));
             if (!updatedItem) {
                 log.error(`- not found review listing id ${request.uniqueKey} in search results`);
@@ -152,10 +156,11 @@ const searchCompanies = async (query, location, maxResults, searchEndpoint, head
     const crawlerJobs2 = new Apify.BasicCrawler({
         requestList: requestList2,
         handleRequestFunction: async ({ request }) => {
-            $ = await requestPromise({
+            const rq = await httpRequest({
                 url: request.url,
                 ...headers,
             });
+            $ = cheerio.load(rq.body);
             // at this point we have from server jobs list page with original job selected
             const updatedItem = searchResults.find(x => x.id === parseInt(request.uniqueKey, 10));
             if (!updatedItem) {
@@ -168,7 +173,6 @@ const searchCompanies = async (query, location, maxResults, searchEndpoint, head
                 jobItem = $('li.jl a').attr('href');
             }
             if (jobItem) {
-                log.info(`Reparsed url ${updatedItem.url} to ${jobItem}`);
                 updatedItem.url = BASE_URL + jobItem;
             } else {
                 searchResults = searchResults.filter(x => x.id.toString() !== request.uniqueKey);

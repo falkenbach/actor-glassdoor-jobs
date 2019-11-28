@@ -1,5 +1,6 @@
 const Apify = require('apify');
-const requestPromise = require('request-promise');
+const httpRequest = require('@apify/http-request');
+const cheerio = require('cheerio');
 const Entities = require('html-entities').AllHtmlEntities;
 
 const { log } = Apify.utils;
@@ -28,10 +29,11 @@ const parseJobs = async (searchResults, headers) => {
         requestList,
         handleRequestFunction: async ({ request }) => {
             log.info(`job GET ${request.url}`);
-            $ = await requestPromise({
+            const rq = await httpRequest({
                 url: request.url,
                 ...headers,
             });
+            $ = cheerio.load(rq.body);
             rawdata = $('script[type="application/ld+json"]').html();
             const cleanstr = rawdata.replace(/\s+/g, ' ').trim();
             json = JSON.parse(cleanstr);
@@ -62,10 +64,11 @@ const parseJobs = async (searchResults, headers) => {
                 // get company details from company overview page
                 const companyUrl = new URL($('div.logo.cell a').attr('href'), BASE_URL);
                 log.info(`company overview GET ${companyUrl}`);
-                $ = await requestPromise({
+                const rq2 = await httpRequest({
                     url: companyUrl,
                     ...headers,
                 });
+                $ = cheerio.load(rq2.body);
                 $('div.infoEntity', '#EmpBasicInfo').each((i, el) => {
                     const infoKey = $('label', el).text().trim();
                     const info = $('span', el).text().trim();
