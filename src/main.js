@@ -67,10 +67,14 @@ Apify.main(async () => {
     * then crawl subpages to get details
     */
     let searchResults = [];
-    if (input.category === 'Companies') {
-        searchResults = await searchCompanies(input.query, input.location, maxResults, searchEndpoint, headersCheerio);
-    } else { // input.category === 'Jobs'
-        searchResults = await searchJobs(input.query, input.location, maxResults, searchEndpoint, headersCheerio);
+    try {
+        if (input.category === 'Companies') {
+            searchResults = await searchCompanies(input.query, input.location, maxResults, searchEndpoint, headersCheerio);
+        } else { // input.category === 'Jobs'
+            searchResults = await searchJobs(input.query, input.location, maxResults, searchEndpoint, headersCheerio);
+        }
+    } catch (err) {
+        log.error(err);
     }
 
     // at this point we have links to jobs in searchResults

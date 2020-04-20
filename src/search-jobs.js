@@ -35,6 +35,7 @@ const searchJobs = async (query, location, maxResults, searchEndpoint, headers) 
     // if no limit for results, then parse it from the initial search
     let maximumResults = maxResults > 0 ? maxResults : -1;
 
+    let itemsToSave;
     do {
         const searchUrl = new URL(nextPageUrl, BASE_URL);
         try {
@@ -68,13 +69,13 @@ const searchJobs = async (query, location, maxResults, searchEndpoint, headers) 
             }
         }
 
-        const itemsToSave = json.slice(0, maximumResults - savedItems);
+        itemsToSave = json.slice(0, maximumResults - savedItems);
         searchResults.push(...itemsToSave);
         savedItems += itemsToSave.length;
         nextPageUrl = $('li.next a', '#FooterPageNav').attr('href');
         log.info(`Page ${page}: Found ${itemsToSave.length} items, next page: ${nextPageUrl}`);
         page++;
-    } while (nextPageUrl && savedItems < maximumResults);
+    } while (nextPageUrl && savedItems < maximumResults && itemsToSave && itemsToSave.length > 0);
 
     return searchResults;
 };
