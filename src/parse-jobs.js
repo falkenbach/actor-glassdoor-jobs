@@ -1,12 +1,11 @@
 const Apify = require('apify');
-const httpRequest = require('@apify/http-request');
 const cheerio = require('cheerio');
 const Entities = require('html-entities').AllHtmlEntities;
 
 const { log } = Apify.utils;
-const { BASE_URL } = require('./consts');
+const { BASE_URL, REQUEST_HEADERS } = require('./consts');
 
-const parseJobs = async (searchResults, headers) => {
+const parseJobs = async (searchResults, proxyUrl) => {
     // encoding-decoding html entities
     // used to get jobDetails from JSON-LD instead of page content
     const entities = new Entities();
@@ -17,9 +16,10 @@ const parseJobs = async (searchResults, headers) => {
     let rawdata;
     let json;
 
-    const requestList = new Apify.RequestList({
-        sources: searchResults.map(x => ({ url: x.url, uniqueKey: x.id.toString() })),
-    });
+    const requestList = await Apify.openRequestList(
+        'LIST3',
+        searchResults.map((x) => ({ url: x.url, uniqueKey: x.id.toString() })),
+    );
     await requestList.initialize();
 
     // keep parsed details from company overview to avoid extra calls
@@ -29,15 +29,16 @@ const parseJobs = async (searchResults, headers) => {
         requestList,
         handleRequestFunction: async ({ request }) => {
             log.info(`job GET ${request.url}`);
-            const rq = await httpRequest({
+            const rq = await Apify.utils.requestAsBrowser({
                 url: request.url,
-                ...headers,
+                proxyUrl,
+                ...REQUEST_HEADERS,
             });
             $ = cheerio.load(rq.body);
             rawdata = $('script[type="application/ld+json"]').html();
             const cleanstr = rawdata.replace(/\s+/g, ' ').trim();
             json = JSON.parse(cleanstr);
-            const updatedItem = searchResults.find(x => x.id === parseInt(request.uniqueKey, 10));
+            const updatedItem = searchResults.find((x) => x.id === parseInt(request.uniqueKey, 10));
             if (!updatedItem) {
                 log.error(`Not found job listing id ${request.uniqueKey} in search results`);
                 return;

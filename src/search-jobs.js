@@ -1,11 +1,12 @@
 const Apify = require('apify');
-const httpRequest = require('@apify/http-request');
 const cheerio = require('cheerio');
 
 const { log } = Apify.utils;
-const { BASE_URL } = require('./consts');
+const { BASE_URL, REQUEST_HEADERS } = require('./consts');
 
-const searchJobs = async (query, location, maxResults, searchEndpoint, headers) => {
+const searchJobs = async (query, location, maxResults, proxyUrl) => {
+    const searchEndpoint = '/Job/jobs.htm';
+
     // global variable for loaded cheerio content to keep jQuery-alike syntax
     let $;
 
@@ -40,9 +41,10 @@ const searchJobs = async (query, location, maxResults, searchEndpoint, headers) 
         const searchUrl = new URL(nextPageUrl, BASE_URL);
         try {
             log.info(`GET ${searchUrl}`);
-            const rq = await httpRequest({
+            const rq = await Apify.utils.requestAsBrowser({
                 url: searchUrl.href,
-                ...headers,
+                proxyUrl,
+                ...REQUEST_HEADERS,
             });
             $ = cheerio.load(rq.body);
             if (maximumResults < 0) {

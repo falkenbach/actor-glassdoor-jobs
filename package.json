@@ -4,19 +4,20 @@
 	"description": "Glassdoor jobs Apify actor.",
 	"dependencies": {
 		"@apify/http-request": "^1.1.5",
-		"apify": "^0.16.0",
+		"apify": "^1.0.0",
 		"cheerio": "^1.0.0-rc.3",
 		"html-entities": "^1.2.1",
 		"request-promise": "^4.2.4"
-	},
-	"devDependencies": {
-		"@apify/eslint-config": "0.0.3",
-		"eslint": "^5.16.0"
 	},
 	"scripts": {
 		"start": "node src/main.js",
 		"test": "echo \"Error: oops, the actor has no tests yet, sad!\" && exit 1"
 	},
 	"author": "Alexey Udovydchenko",
-	"license": "ISC"
+	"license": "ISC",
+	"devDependencies": {
+		"@apify/eslint-config": "^0.1.3",
+		"@types/eslint": "^7.2.6",
+		"eslint": "^7.19.0"
+	}
 }

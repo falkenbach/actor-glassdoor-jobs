@@ -1,11 +1,12 @@
 const Apify = require('apify');
-const httpRequest = require('@apify/http-request');
 const cheerio = require('cheerio');
 
 const { log } = Apify.utils;
-const { BASE_URL } = require('./consts');
+const { BASE_URL, REQUEST_HEADERS } = require('./consts');
 
-const searchCompanies = async (query, location, maxResults, searchEndpoint, headers) => {
+const searchCompanies = async (query, location, maxResults, proxyUrl) => {
+    const searchEndpoint = '/Reviews/company-reviews.htm';
+
     // global variable for loaded cheerio content to keep jQuery-alike syntax
     let $;
 
@@ -44,9 +45,10 @@ const searchCompanies = async (query, location, maxResults, searchEndpoint, head
         const searchUrl = new URL(nextPageUrl, BASE_URL);
         try {
             log.info(`GET ${searchUrl}`);
-            const rq = await httpRequest({
+            const rq = await Apify.utils.requestAsBrowser({
                 url: searchUrl.href,
-                ...headers,
+                proxyUrl,
+                ...REQUEST_HEADERS,
             });
             $ = cheerio.load(rq.body);
             if (maximumResults < 0) {
@@ -91,20 +93,22 @@ const searchCompanies = async (query, location, maxResults, searchEndpoint, head
     // excpected patter for produced urls is
     // eslint-disable-next-line max-len
     // /partner/jobListing.htm?pos=101&ao=192357&s=21&guid=0000016e49ba886daefd02a1638a7892&src=GD_JOB_AD&ei=868966&t=ESR&extid=2&exst=E&ist=L&ast=EL&vt=w&slr=true&cs=1_6b5d487e&cb=1573194992086&jobListingId=3026368183&rdserp=true
-    const requestList = new Apify.RequestList({
-        sources: reviewResults.map(x => ({ url: x.url, uniqueKey: x.id.toString() })),
-    });
+    const requestList = await Apify.openRequestList(
+        'LIST1',
+        reviewResults.map((x) => ({ url: x.url, uniqueKey: x.id.toString() })),
+    );
     await requestList.initialize();
     const crawlerJobs1 = new Apify.BasicCrawler({
         requestList,
         handleRequestFunction: async ({ request }) => {
             const newUrl = new URL(request.url, BASE_URL);
-            const rq = await httpRequest({
+            const rq = await Apify.utils.requestAsBrowser({
                 url: newUrl.href,
-                ...headers,
+                proxyUrl,
+                ...REQUEST_HEADERS,
             });
             $ = cheerio.load(rq.body);
-            const updatedItem = reviewResults.find(x => x.id === parseInt(request.uniqueKey, 10));
+            const updatedItem = reviewResults.find((x) => x.id === parseInt(request.uniqueKey, 10));
             if (!updatedItem) {
                 log.error(`- not found review listing id ${request.uniqueKey} in search results`);
                 return;
@@ -150,20 +154,22 @@ const searchCompanies = async (query, location, maxResults, searchEndpoint, head
     // /partner/jobListing.htm?pos=101&ao=192357&s=21&guid=0000016e49ba886daefd02a1638a7892&src=GD_JOB_AD&t=SR&extid=1&exst=OL&ist=&ast=OL&vt=w&slr=true&cs=1_6b5d487e&cb=1573195025827&jobListingId=3026368183
     // and saving it in searchResults
     // TODO - patterns have similarity, might be possible to craft second link from first without doing actual call to the server
-    const requestList2 = new Apify.RequestList({
-        sources: searchResults.map(x => ({ url: BASE_URL + x.url, uniqueKey: x.id.toString() })),
-    });
+    const requestList2 = await Apify.openRequestList(
+        'LIST2',
+        searchResults.map((x) => ({ url: BASE_URL + x.url, uniqueKey: x.id.toString() })),
+    );
     await requestList2.initialize();
     const crawlerJobs2 = new Apify.BasicCrawler({
         requestList: requestList2,
         handleRequestFunction: async ({ request }) => {
-            const rq = await httpRequest({
+            const rq = await Apify.utils.requestAsBrowser({
                 url: request.url,
-                ...headers,
+                proxyUrl,
+                ...REQUEST_HEADERS,
             });
             $ = cheerio.load(rq.body);
             // at this point we have from server jobs list page with original job selected
-            const updatedItem = searchResults.find(x => x.id === parseInt(request.uniqueKey, 10));
+            const updatedItem = searchResults.find((x) => x.id === parseInt(request.uniqueKey, 10));
             if (!updatedItem) {
                 log.error(`- not found review listing id ${request.uniqueKey} in search results`);
                 return;
@@ -176,7 +182,7 @@ const searchCompanies = async (query, location, maxResults, searchEndpoint, head
             if (jobItem) {
                 updatedItem.url = BASE_URL + jobItem;
             } else {
-                searchResults = searchResults.filter(x => x.id.toString() !== request.uniqueKey);
+                searchResults = searchResults.filter((x) => x.id.toString() !== request.uniqueKey);
                 log.error(`Job item ${request.uniqueKey} not found at ${request.url}`);
                 await Apify.pushData({
                     '#isFailed': true,

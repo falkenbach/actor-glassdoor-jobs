@@ -1,18 +1,12 @@
 const Apify = require('apify');
-const httpRequest = require('@apify/http-request');
 
 const { log } = Apify.utils;
-const { BASE_URL, REQUEST_HEADERS } = require('./consts');
+const { REQUEST_HEADERS } = require('./consts');
 
 const findGlassdoorLocation = async (locationText, locationState, proxyUrl) => {
-    if (!locationText) {
-        return '';
-    }
-
     // results limited to 1 since we will not use more than 1
-    const searchEndpoint = new URL(`/findPopularLocationAjax.htm?term=${locationText}&maxLocationsToReturn=10`, BASE_URL);
-    const locationsRequest = await httpRequest({
-        url: searchEndpoint.href,
+    const locationsRequest = await Apify.utils.requestAsBrowser({
+        url: `https://www.glassdoor.com/findPopularLocationAjax.htm?term=${locationText}&maxLocationsToReturn=10`,
         json: true,
         ...REQUEST_HEADERS,
         proxyUrl,
@@ -27,7 +21,7 @@ const findGlassdoorLocation = async (locationText, locationState, proxyUrl) => {
         // "Yorktown, VA (US)"
         if (locationState && typeof locationState === 'string') {
             locationState = locationState.toUpperCase();
-            locIndex = locations.findIndex(x => x.longName.includes(`, ${locationState} (`));
+            locIndex = locations.findIndex((x) => x.longName.includes(`, ${locationState} (`));
         }
         const foundLocation = locations[locIndex >= 0 ? locIndex : 0];
         locationText = `&locT=${foundLocation.locationType}&locId=${foundLocation.locationId}&locKeyword=${locationText}`;
