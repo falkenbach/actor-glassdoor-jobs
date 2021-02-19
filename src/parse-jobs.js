@@ -20,7 +20,6 @@ const parseJobs = async (searchResults, proxyUrl) => {
         'LIST3',
         searchResults.map((x) => ({ url: x.url, uniqueKey: x.id.toString() })),
     );
-    await requestList.initialize();
 
     // keep parsed details from company overview to avoid extra calls
     const companyDetails = {};
@@ -65,9 +64,10 @@ const parseJobs = async (searchResults, proxyUrl) => {
                 // get company details from company overview page
                 const companyUrl = new URL($('div.logo.cell a').attr('href'), BASE_URL);
                 log.info(`company overview GET ${companyUrl}`);
-                const rq2 = await httpRequest({
+                const rq2 = await Apify.utils.requestAsBrowser({
                     url: companyUrl,
-                    ...headers,
+                    proxyUrl,
+                    ...REQUEST_HEADERS,
                 });
                 $ = cheerio.load(rq2.body);
                 $('div.infoEntity', '#EmpBasicInfo').each((i, el) => {

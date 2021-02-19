@@ -46,6 +46,7 @@ const searchJobs = async (query, location, maxResults, proxyUrl) => {
                 proxyUrl,
                 ...REQUEST_HEADERS,
             });
+            await Apify.setValue('HTML', rq.body, { contentType: 'text/html' });
             $ = cheerio.load(rq.body);
             if (maximumResults < 0) {
                 const cntStr = $('p.jobsCount').text().replace(',', '');
@@ -55,7 +56,7 @@ const searchJobs = async (query, location, maxResults, proxyUrl) => {
                 }
                 log.info(`Parsed maximumResults = ${maximumResults}`);
             }
-            rawdata = $('li.jl');
+            rawdata = $('li.react-job-listing');
             json = rawdata
                 .map(mapJobListItem)
                 .get();
@@ -70,7 +71,7 @@ const searchJobs = async (query, location, maxResults, proxyUrl) => {
                 throw error;
             }
         }
-
+        console.dir(json);
         itemsToSave = json.slice(0, maximumResults - savedItems);
         searchResults.push(...itemsToSave);
         savedItems += itemsToSave.length;
