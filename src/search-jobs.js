@@ -77,7 +77,7 @@ const searchJobs = async (query, location, maxResults, proxyUrl) => {
         itemsToSave = json.slice(0, maximumResults - savedItems);
         searchResults.push(...itemsToSave);
         savedItems += itemsToSave.length;
-        nextPageUrl = $('li.next a', '#FooterPageNav').attr('href');
+        nextPageUrl = $('a[data-test="pagination-next"]', '#FooterPageNav').attr('href');
         log.info(`Page ${page}: Found ${itemsToSave.length} items, next page: ${nextPageUrl}`);
         page++;
     } while (nextPageUrl && savedItems < maximumResults && itemsToSave && itemsToSave.length > 0);
