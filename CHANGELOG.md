@@ -4,5 +4,4 @@
 *Fixes*
 - fixed "employerName", "employerRating", "salary" and  "jobLocation" fields in the output object (#8, #11);
 - Fixed issue with pagination (it was scraping only first 30 results from the first page) (#13);
-*Updates*
-- Updated SDK to 1.2.0 version.
+- Updated SDK to 1.2.0.
