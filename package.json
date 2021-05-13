@@ -4,10 +4,10 @@
 	"description": "Glassdoor jobs Apify actor.",
 	"dependencies": {
 		"@apify/http-request": "^1.1.5",
-		"apify": "^1.0.0",
-		"cheerio": "^1.0.0-rc.3",
+		"apify": "^1.2.0",
+		"cheerio": "^1.0.0-rc.9",
 		"html-entities": "^1.2.1",
-		"request-promise": "^4.2.4"
+		"request-promise": "^4.2.6"
 	},
 	"scripts": {
 		"start": "node src/main.js",

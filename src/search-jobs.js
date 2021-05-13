@@ -12,16 +12,18 @@ const searchJobs = async (query, location, maxResults, proxyUrl) => {
 
     // mapping for items in the jobs search list
     const mapJobListItem = (i, el) => {
+        const employerRating = parseFloat($($($(el).find('div')[0]).find('span')[1]).text());
         return {
             id: $(el).data('id'),
-            employerName: $('div.jobInfoItem.jobEmpolyerName', el).text(),
-            employerRating: parseFloat($('span.compactStars', el).text()),
+            employerName: $($('a.jobLink > span', el)[1]).text(),
+            employerRating: employerRating ? employerRating : '',
             jobTitle: $('a', el).last().text(),
-            jobLocation: $('span.subtle.loc', el).text(), // div.jobInfoItem.empLoc includes tooltips like "hot" or "easy hire"
+            jobLocation: $(el).data('jobLoc'), 
             url: BASE_URL + $('a', el).attr('href'),
             jobDetails: '',
             companyDetails: '',
-            salary: $('span.salaryText', el).text().trim(),
+            salary: $(el).find('span[data-test="detailSalary"]').text().trim(),
+             
         };
     };
 
@@ -49,7 +51,7 @@ const searchJobs = async (query, location, maxResults, proxyUrl) => {
             await Apify.setValue('HTML', rq.body, { contentType: 'text/html' });
             $ = cheerio.load(rq.body);
             if (maximumResults < 0) {
-                const cntStr = $('p.jobsCount').text().replace(',', '');
+                const cntStr = $('p[data-test="jobsCount"]').text().replace(',', '');
                 maximumResults = parseInt(cntStr, 10);
                 if (!(maximumResults > 0)) {
                     throw new Error(`Failed to parse jobsCount from ${cntStr}`);
@@ -75,7 +77,7 @@ const searchJobs = async (query, location, maxResults, proxyUrl) => {
         itemsToSave = json.slice(0, maximumResults - savedItems);
         searchResults.push(...itemsToSave);
         savedItems += itemsToSave.length;
-        nextPageUrl = $('li.next a', '#FooterPageNav').attr('href');
+        nextPageUrl = $('a[data-test="pagination-next"]', '#FooterPageNav').attr('href');
         log.info(`Page ${page}: Found ${itemsToSave.length} items, next page: ${nextPageUrl}`);
         page++;
     } while (nextPageUrl && savedItems < maximumResults && itemsToSave && itemsToSave.length > 0);
