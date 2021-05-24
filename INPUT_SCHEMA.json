@@ -15,8 +15,7 @@
             "description": "Jobs or Companies",
             "prefill": "Jobs",
             "enum": [
-                "Jobs",
-                "Companies"
+                "Jobs"
             ],
             "editor": "select"
         },

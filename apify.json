@@ -1,7 +1,7 @@
 {
-	"name": "glassdoor-jobs",
-	"version": "0.1",
+	"name": "actor-glassdoor-jobs-my-new",
+	"version": "0.0",
 	"buildTag": "latest",
 	"env": null,
-	"template": "basic_crawler"
+	"template": "project_empty"
 }
