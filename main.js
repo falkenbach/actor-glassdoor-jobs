@@ -29,13 +29,12 @@ Apify.main(async () => {
     if (typeof query !== 'string') {
         throw new Error('WRONG INPUT: must contain `query` field as string');
     }
-
-    const proxyUrl = proxyConfiguration ? proxyConfiguration.newUrl() : undefined;
+    // const proxyUrl = proxyConfiguration ? proxyConfiguration.newUrl() : undefined;
     // DEALING WITH LOCATION
     // location is optional, if specified we need to get available options from location search
     let foundLocation = '';
     if (location) {
-        foundLocation = await findGlassdoorLocation(location, locationstate, proxyUrl);
+        foundLocation = await findGlassdoorLocation(location, locationstate, proxyConfiguration);
     }
     // if no limit for results, then parse it from the initial search
     const maximumResults = maxResults > 0 ? maxResults : -1;
@@ -57,6 +56,7 @@ Apify.main(async () => {
     const crawler = new Apify.BasicCrawler({
         requestQueue,
         maxConcurrency: 20,
+        useSessionPool: true,
         // SOMETIMES IT FAILS TO GET NEEDED JSON FROM THE PAGE => INCREASED RETRIES
         maxRequestRetries: 7,
         handleRequestFunction: async (context) => {
@@ -65,9 +65,9 @@ Apify.main(async () => {
             // eslint-disable-next-line default-case
             switch (label) {
                 case 'SEARCH-JOBS':
-                    return searchJobs(context, requestQueue, proxyUrl);
+                    return searchJobs(context, requestQueue, proxyConfiguration);
                 case 'PARSE-JOBS':
-                    return parseJobs(context, proxyUrl);
+                    return parseJobs(context, proxyConfiguration);
             }
         },
         handleFailedRequestFunction: async ({ request, error }) => {

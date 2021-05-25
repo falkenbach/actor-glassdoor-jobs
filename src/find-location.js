@@ -3,12 +3,12 @@ const Apify = require('apify');
 
 const { log } = Apify.utils;
 
-const findGlassdoorLocation = async (locationText, locationState, proxyUrl) => {
+const findGlassdoorLocation = async (locationText, locationState, proxyConfiguration) => {
     // results limited to 1 since we will not use more than 1
     const locationsRequest = await Apify.utils.requestAsBrowser({
         url: `https://www.glassdoor.com/findPopularLocationAjax.htm?term=${locationText}&maxLocationsToReturn=10`,
         json: true,
-        proxyUrl,
+        proxyUrl: proxyConfiguration.newUrl(),
     });
     const locations = locationsRequest.body;
     if (locations.length > 0) {

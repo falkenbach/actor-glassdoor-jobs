@@ -9,16 +9,6 @@
             "description": "Job Title, Keywords, or Company",
             "editor": "textfield"
         },
-        "category": {
-            "title": "Category",
-            "type": "string",
-            "description": "Jobs or Companies",
-            "prefill": "Jobs",
-            "enum": [
-                "Jobs"
-            ],
-            "editor": "select"
-        },
         "location": {
             "title": "Location",
             "type": "string",

@@ -6,14 +6,15 @@ const { log } = Apify.utils;
 const { BASE_URL,
 } = require('./consts');
 
-const searchJobs = async ({ request }, requestQueue, proxyUrl) => {
+const searchJobs = async ({ request, session }, requestQueue, proxyConfiguration) => {
     // GETTING LABEL AND PAGE COUNTER FROM THE REQUEST FOR PAGINATION
     const { label, searchResults } = request.userData;
     let { page, itemsToSave, savedItems, maximumResults } = request.userData;
     let $;
     // FUNCTION TO MAP JOB ELEMS ON THE PAGE
     const mapJobListItem = (i, el) => {
-        const employerRating = parseFloat($($($(el).find('div')[0]).find('span')[1]).text());
+        // const employerRating = parseFloat($($($(el).find('div')[0]).find('span')[1]).text());
+        const employerRating = parseFloat($(el).find('div:eq(0) span:eq(1)').first().text());
         return {
             id: $(el).data('id'),
             employerName: $($('a.jobLink > span', el)[1]).text(),
@@ -35,7 +36,7 @@ const searchJobs = async ({ request }, requestQueue, proxyUrl) => {
         // REQUEST ITSELF
         const rq = await Apify.utils.requestAsBrowser({
             url: request.url,
-            proxyUrl,
+            proxyUrl: proxyConfiguration.newUrl(session.id),
         });
         // ADDING CHEERIO
         $ = cheerio.load(rq.body);
