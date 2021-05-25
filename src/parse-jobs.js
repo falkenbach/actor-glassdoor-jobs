@@ -18,8 +18,13 @@ const parseJobs = async ({ request, session }, proxyConfiguration) => {
     // GETTING INFO FROM THE PAGE
     let clearDetails = $('#JobDescriptionContainer').text().trim(); // but no artifacts from html decoding here
     let script = $('#JobView script').html();
-    script = script.replace('window.appCache=', '').slice(0, -1);
-    const jsonCompanyInfo = JSON.parse(script);
+    try {
+        script = script.replace('window.appCache=', '').slice(0, -1);
+    } catch (e) {
+        log.debug('Error on getting JSON', { message: e.message, stack: e.stack });
+        throw new Error('The page didnt load properly, will try again...');
+    }
+    const jsonCompanyInfo = JSON.parse(script);        
 
     if (!clearDetails) {
         // so for now second option will be used as jobDetails, decoding below was for json.description
@@ -81,7 +86,7 @@ const parseJobs = async ({ request, session }, proxyConfiguration) => {
         jobLocation: jsonCompanyInfo.initialState.jlData.header.locationName,
         companyDetails: { ...moreDetails },
         jobDetails: clearDetails,
-        datePosted: jsonCompanyInfo.initialState.jlData.header.posted,
+        datePosted: new Date(jsonCompanyInfo.initialState.jlData.header.posted),
     });
 };
 
