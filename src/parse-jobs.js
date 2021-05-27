@@ -3,106 +3,91 @@ const cheerio = require('cheerio');
 const Entities = require('html-entities').AllHtmlEntities;
 
 const { log } = Apify.utils;
-const { BASE_URL, REQUEST_HEADERS } = require('./consts');
 
-const parseJobs = async (searchResults, proxyUrl) => {
+const parseJobs = async ({ request, session }, proxyConfiguration) => {
+    const { item } = request.userData;
     // encoding-decoding html entities
     // used to get jobDetails from JSON-LD instead of page content
     const entities = new Entities();
-
-    // global variable for loaded cheerio content to keep jQuery-alike syntax
-    let $;
-
-    let rawdata;
-    let json;
-
-    const requestList = await Apify.openRequestList(
-        'LIST3',
-        searchResults.map((x) => ({ url: x.url, uniqueKey: x.id.toString() })),
-    );
-
-    // keep parsed details from company overview to avoid extra calls
-    const companyDetails = {};
-
-    const crawler = new Apify.BasicCrawler({
-        requestList,
-        handleRequestFunction: async ({ request }) => {
-            log.info(`job GET ${request.url}`);
-            const rq = await Apify.utils.requestAsBrowser({
-                url: request.url,
-                proxyUrl,
-                ...REQUEST_HEADERS,
-            });
-            $ = cheerio.load(rq.body);
-            rawdata = $('script[type="application/ld+json"]').html();
-            const cleanstr = rawdata.replace(/\s+/g, ' ').trim();
-            json = JSON.parse(cleanstr);
-            const updatedItem = searchResults.find((x) => x.id === parseInt(request.uniqueKey, 10));
-            if (!updatedItem) {
-                log.error(`Not found job listing id ${request.uniqueKey} in search results`);
-                return;
-            }
-
-            // remove html formatting from job description
-            // for whatever reason div below sometimes available, sometimes not
-            let clearDetails = $('#JobDescriptionContainer').text().trim(); // but no artifacts from html decoding here
-            if (!clearDetails) {
-                // so for now second option will be used as jobDetails, decoding below was for json.description
-                clearDetails = json.description; // html encoded, decoding is not 99% accurate
-                try {
-                    clearDetails = entities.decode(clearDetails); // this will transform html decoded content to plain html
-                    clearDetails = $(clearDetails).text(); // then we create html from content and getting it as plain text
-                } catch (err) {
-                    log.error(err);
-                }
-            }
-            // get employer id, check if we have cached overview
-            const eid = $('#EmpHero').data('employer-id');
-            let moreDetails = companyDetails[eid];
-            if (!moreDetails) {
-                moreDetails = {};
-                // get company details from company overview page
-                const companyUrl = new URL($('div.logo.cell a').attr('href'), BASE_URL);
-                log.info(`company overview GET ${companyUrl}`);
-                const rq2 = await Apify.utils.requestAsBrowser({
-                    url: companyUrl,
-                    proxyUrl,
-                    ...REQUEST_HEADERS,
-                });
-                $ = cheerio.load(rq2.body);
-                $('div.infoEntity', '#EmpBasicInfo').each((i, el) => {
-                    const infoKey = $('label', el).text().trim();
-                    const info = $('span', el).text().trim();
-                    if (infoKey && info) {
-                        moreDetails[infoKey] = info;
-                    }
-                });
-                companyDetails[eid] = moreDetails;
-            }
-
-            log.info(`Saving details for job listing id ${request.uniqueKey}`);
-            // unified output based on list item and sub page
-            await Apify.pushData({
-                ...updatedItem,
-                url: json.url,
-                salary: json.estimatedSalary,
-                jobLocation: json.jobLocation,
-                companyDetails: { ...json.hiringOrganization, ...moreDetails },
-                jobDetails: clearDetails,
-                datePosted: json.datePosted,
-            });
-        },
-        /*
-        handleFailedRequestFunction: async ({ request }) => {
-            await Apify.pushData({
-                '#isFailed': true,
-                '#debug': Apify.utils.createRequestDebugInfo(request),
-            });
-        },
-        */
+    const rq = await Apify.utils.requestAsBrowser({
+        url: request.url,
+        proxyUrl: proxyConfiguration.newUrl(session.id),
     });
-    await crawler.run();
-    return searchResults;
+    // GETTING JSON WITH THE NEEDED INFO
+    const $ = cheerio.load(rq.body);
+    // GETTING INFO FROM THE PAGE
+    let clearDetails = $('#JobDescriptionContainer').text().trim(); // but no artifacts from html decoding here
+    let script = $('#JobView script').html();
+    try {
+        script = script.replace('window.appCache=', '').slice(0, -1);
+    } catch (e) {
+        log.debug('Error on getting JSON', { message: e.message, stack: e.stack });
+        throw new Error('The page didnt load properly, will try again...');
+    }
+    const jsonCompanyInfo = JSON.parse(script);        
+
+    if (!clearDetails) {
+        // so for now second option will be used as jobDetails, decoding below was for json.description
+        try {
+            clearDetails = jsonCompanyInfo.initialState.jlData.job.description; // html encoded, decoding is not 99% accurate
+            clearDetails = entities.decode(clearDetails); // this will transform html decoded content to plain html
+            clearDetails = $(clearDetails).text(); // then we create html from content and getting it as plain text
+        } catch (err) {
+            log.error(err);
+        }
+    }
+
+    // ON A HUGE NUMBER OF SEARCH ITEMS JSON IS A BIT DIFFERENT. SO NEEDS TO MAKE ALL THIS CHECKS
+    const moreDetails = {
+        logo: jsonCompanyInfo.initialState?.jlData?.header?.employer?.squareLogoUrl ?? null,
+        name: jsonCompanyInfo.initialState?.jlData?.header?.employerNameFromSearch ?? null,
+        ceoName: jsonCompanyInfo.initialState?.jlData?.overview?.ceo ?? null,
+        headquarters: jsonCompanyInfo.initialState?.jlData?.overview?.headquarters ?? null,
+        industry: jsonCompanyInfo.initialState?.jlData?.overview?.primaryIndustry ?? null,
+        sector: jsonCompanyInfo.initialState?.jlData?.overview?.primaryIndustry?.sectorName ?? null,
+        // COMPANY RATINGS
+        // IF COMPANY DOESN'T HAVE RATINGS, VALUE IN JSON HAS NEGATIVE NUMBER, SO NEEDS TO MAKE CHECK IF > 0
+        companyRating: (jsonCompanyInfo.initialState.jlData.rating
+            && jsonCompanyInfo.initialState.jlData.rating > 0)
+            ? jsonCompanyInfo.initialState.jlData.rating.starRating : null,
+        careerOpportunitiesRating: (jsonCompanyInfo.initialState.jlData.overview.ratings
+            && jsonCompanyInfo.initialState.jlData.overview.ratings > 0)
+            ? jsonCompanyInfo.initialState.jlData.overview.ratings.careerOpportunitiesRating : null,
+        compensationAndBenefitsRating: (jsonCompanyInfo.initialState.jlData.overview.ratings
+            && jsonCompanyInfo.initialState.jlData.overview.ratings > 0)
+            ? jsonCompanyInfo.initialState.jlData.overview.ratings.compensationAndBenefitsRating : null,
+        cultureAndValuesRating: (jsonCompanyInfo.initialState.jlData.overview.ratings
+            && jsonCompanyInfo.initialState.jlData.overview.ratings > 0)
+            ? jsonCompanyInfo.initialState.jlData.overview.ratings.cultureAndValuesRating : null,
+        workLifeBalanceRating: (jsonCompanyInfo.initialState.jlData.overview.ratings
+            && jsonCompanyInfo.initialState.jlData.overview.ratings > 0)
+            ? jsonCompanyInfo.initialState.jlData.overview.ratings.workLifeBalanceRating : null,
+        revenue: jsonCompanyInfo.initialState?.jlData?.overview?.revenue ?? null,
+        size: jsonCompanyInfo.initialState?.jlData?.overview?.size ?? null,
+        type: jsonCompanyInfo.initialState?.jlData?.overview?.type ?? null,
+        website: jsonCompanyInfo.initialState?.jlData?.overview?.website ?? null,
+        yearFounded: jsonCompanyInfo.initialState?.jlData?.overview?.yearFounded ?? null,
+    };
+
+    log.info(`Saving details for job listing id ${request.uniqueKey}`);
+    // SAVING FINAL DATA
+    await Apify.pushData({
+        ...item,
+        url: `https://www.glassdoor.com${jsonCompanyInfo.initialState.parsedRequest.url}`,
+        salary: {
+            min: (jsonCompanyInfo.initialState.jlData.header.payPercentile10 && jsonCompanyInfo.initialState.jlData.header.payPercentile10 > 0)
+                ? jsonCompanyInfo.initialState.jlData.header.payPercentile10 : null,
+            max: (jsonCompanyInfo.initialState.jlData.header.payPercentile90 && jsonCompanyInfo.initialState.jlData.header.payPercentile90 > 0)
+                ? jsonCompanyInfo.initialState.jlData.header.payPercentile90 : null,
+            payPeriod: jsonCompanyInfo.initialState.jlData.header.payPeriod,
+            currency: jsonCompanyInfo.initialState.jlData.header.payCurrency,
+            source: jsonCompanyInfo.initialState.jlData.header.salarySource,
+        },
+        jobLocation: jsonCompanyInfo.initialState.jlData.header.locationName,
+        companyDetails: { ...moreDetails },
+        jobDetails: clearDetails,
+        datePosted: new Date(jsonCompanyInfo.initialState.jlData.header.posted),
+    });
 };
 
 module.exports = {

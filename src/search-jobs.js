@@ -2,87 +2,115 @@ const Apify = require('apify');
 const cheerio = require('cheerio');
 
 const { log } = Apify.utils;
-const { BASE_URL, REQUEST_HEADERS } = require('./consts');
 
-const searchJobs = async (query, location, maxResults, proxyUrl) => {
-    const searchEndpoint = '/Job/jobs.htm';
+const { BASE_URL,
+} = require('./consts');
 
-    // global variable for loaded cheerio content to keep jQuery-alike syntax
+const searchJobs = async ({ request, session }, requestQueue, proxyConfiguration) => {
+    // GETTING LABEL AND PAGE COUNTER FROM THE REQUEST FOR PAGINATION
+    const { label, searchResults } = request.userData;
+    let { page, itemsToSave, savedItems, maximumResults } = request.userData;
     let $;
-
-    // mapping for items in the jobs search list
+    // FUNCTION TO MAP JOB ELEMS ON THE PAGE
     const mapJobListItem = (i, el) => {
-        const employerRating = parseFloat($($($(el).find('div')[0]).find('span')[1]).text());
+        // const employerRating = parseFloat($($($(el).find('div')[0]).find('span')[1]).text());
+        const employerRating = parseFloat($(el).find('div:eq(0) span:eq(1)').first().text());
         return {
             id: $(el).data('id'),
             employerName: $($('a.jobLink > span', el)[1]).text(),
-            employerRating: employerRating ? employerRating : '',
+            employerRating: employerRating || '',
             jobTitle: $('a', el).last().text(),
-            jobLocation: $(el).data('jobLoc'), 
+            jobLocation: $(el).data('jobLoc'),
             url: BASE_URL + $('a', el).attr('href'),
-            jobDetails: '',
-            companyDetails: '',
+            jobDetails: '', // GETTING IT IN PARSE-JOB.JS
+            companyDetails: '', // GETTING IT IN PARSE-JOB.JS
             salary: $(el).find('span[data-test="detailSalary"]').text().trim(),
-             
         };
     };
+    log.info(`savedItems: ${savedItems}`);
+    // CHECK FOR THE LAST PAGE
+    let currentPage;
+    let maxPage;
 
-    let page = 1;
-    let savedItems = 0;
-    let rawdata;
-    let json;
-    let limitRetries = 0;
-    let nextPageUrl = `${searchEndpoint}?sc.keyword=${query}${location}&srs=RECENT_SEARCHES`;
-
-    const searchResults = [];
-    // if no limit for results, then parse it from the initial search
-    let maximumResults = maxResults > 0 ? maxResults : -1;
-
-    let itemsToSave;
-    do {
-        const searchUrl = new URL(nextPageUrl, BASE_URL);
-        try {
-            log.info(`GET ${searchUrl}`);
-            const rq = await Apify.utils.requestAsBrowser({
-                url: searchUrl.href,
-                proxyUrl,
-                ...REQUEST_HEADERS,
-            });
-            await Apify.setValue('HTML', rq.body, { contentType: 'text/html' });
-            $ = cheerio.load(rq.body);
-            if (maximumResults < 0) {
-                const cntStr = $('p[data-test="jobsCount"]').text().replace(',', '');
-                maximumResults = parseInt(cntStr, 10);
-                if (!(maximumResults > 0)) {
-                    throw new Error(`Failed to parse jobsCount from ${cntStr}`);
-                }
-                log.info(`Parsed maximumResults = ${maximumResults}`);
+    if (savedItems === 0 || savedItems < maximumResults) {
+        // REQUEST ITSELF
+        const rq = await Apify.utils.requestAsBrowser({
+            url: request.url,
+            proxyUrl: proxyConfiguration.newUrl(session.id),
+        });
+        // ADDING CHEERIO
+        $ = cheerio.load(rq.body);
+        // IF THERE IS NO MAX RESULT IN THE INPUT => GETTING ALL AVAILABLE
+        if (maximumResults < 0) {
+            // COUNTER OF RESULTS ON THE PAGE
+            const cntStr = $('p[data-test="jobsCount"]').text().replace(',', '');
+            maximumResults = parseInt(cntStr, 10);
+            if (!(maximumResults > 0)) {
+                throw new Error(`Failed to parse jobsCount from ${cntStr}`);
             }
-            rawdata = $('li.react-job-listing');
-            json = rawdata
-                .map(mapJobListItem)
-                .get();
-        } catch (error) {
-            if (error.statusCode === 504 && limitRetries < 5) {
-                log.info(' - Encountered rate limit, waiting 3 seconds');
-                await Apify.utils.sleep(3000);
-                limitRetries++;
-                continue; // eslint-disable-line
-            } else {
-                // Rethrow non rate-limit errors or if we are stuck
-                throw error;
-            }
+            log.info(`Parsed maximumResults = ${maximumResults}`);
         }
-        console.dir(json);
+        const rawdata = $('li.react-job-listing');
+        const json = rawdata
+            .map(mapJobListItem)
+            .get();
         itemsToSave = json.slice(0, maximumResults - savedItems);
         searchResults.push(...itemsToSave);
         savedItems += itemsToSave.length;
-        nextPageUrl = $('a[data-test="pagination-next"]', '#FooterPageNav').attr('href');
-        log.info(`Page ${page}: Found ${itemsToSave.length} items, next page: ${nextPageUrl}`);
-        page++;
-    } while (nextPageUrl && savedItems < maximumResults && itemsToSave && itemsToSave.length > 0);
 
-    return searchResults;
+        let nextPage;
+        const currentUrl = request.url;
+        if (page === 1) {
+            // FOR THE NEXT PAGES THERE IS DIFFERENT STRUCTURE OF THE URL - GETTING IT FROM META TAG ON THE PAGE
+            nextPage = $('meta[property="og:url"]').attr('content');
+            // PAGINATION IS REPRESENTED BY '_IP2,3,4,5...'
+            nextPage = nextPage.replace('.htm', '_IP2.htm');
+        } else if (page > 1) {
+            nextPage = currentUrl.replace(currentUrl.match(/IP([0-9.]+)/)[1], `${page}.`);
+        }
+        // SECOND PAGE WAS ADDED ABOVE => ADDING THIRD ONE
+        if (page === 1) {
+            page += 2;
+        } else {
+            page += 1;
+        }
+        currentPage = +$('div[data-test="page-x-of-y"]').text().replace('Page', '').split('of')[0].trim();
+    try {
+        maxPage = +$('div[data-test="page-x-of-y"]').text().replace('Page', '').split('of')[1].trim();
+    } catch (e) {
+        log.debug('Error on getting last page.', { message: e.message, stack: e.stack });
+        throw new Error('Failed to get number of the last page, will try again...');
+    }
+        if (currentPage <= maxPage) {
+            await requestQueue.addRequest({
+                url: nextPage,
+                userData: {
+                    page,
+                    label,
+                    itemsToSave,
+                    savedItems,
+                    searchResults,
+                    maximumResults,
+                },
+            });
+        }
+    }
+    // NEED TO CHECK FOR UNIQUE => SOMETIMES THERE ARE SAME JOB OFFERS IN THE LIST.
+    // ONE JOB CAN BE REPRESENTED IN DIFFERENT LOCATIONS.
+    if (savedItems >= maximumResults || currentPage === maxPage) {
+        const checkUnique = [...new Set(searchResults.map((x) => x.id))];
+        log.info(`Found ${checkUnique.length} unique listings out of ${searchResults.length} in total`);
+        for (const item of searchResults) {
+            await requestQueue.addRequest({
+                url: item.url,
+                uniqueKey: item.id.toString(),
+                userData: {
+                    label: 'PARSE-JOBS',
+                    item: { ...item },
+                },
+            });
+        }
+    }
 };
 
 module.exports = {

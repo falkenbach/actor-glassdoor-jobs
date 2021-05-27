@@ -1,4 +1,8 @@
 
+## 2021-05-24
+*Fixes*
+- removed "company search" mode;
+- added additional values to the final output object;
 
 ## 2021-05-13
 *Fixes*
