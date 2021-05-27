@@ -28,8 +28,8 @@ const parseJobs = async ({ request, session }, proxyConfiguration) => {
 
     if (!clearDetails) {
         // so for now second option will be used as jobDetails, decoding below was for json.description
-        clearDetails = jsonCompanyInfo.initialState.jlData.job.description; // html encoded, decoding is not 99% accurate
         try {
+            clearDetails = jsonCompanyInfo.initialState.jlData.job.description; // html encoded, decoding is not 99% accurate
             clearDetails = entities.decode(clearDetails); // this will transform html decoded content to plain html
             clearDetails = $(clearDetails).text(); // then we create html from content and getting it as plain text
         } catch (err) {
