@@ -32,7 +32,7 @@ Apify.main(async () => {
     }
 
     if (startUrl && query) {
-        log.info('WARNING: You provided in input both "URL" and "query" fields. Only query parameters from "URL" field would be used in the actor.')
+        log.warning('You provided in input both "URL" and "query" fields. Only start URL will be used in actor.')
     }
 
     if (startUrl && !startUrl.includes('/Job/jobs.htm?sc.keyword=')) {
