@@ -1,3 +1,7 @@
+## 2021-05-24
+*Fixes*
+- added to the input "URL" field. Implemented logic about using it as the start link;
+- removed logging of unnecessary and confusing information;
 
 ## 2021-05-24
 *Fixes*

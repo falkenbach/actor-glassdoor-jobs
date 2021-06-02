@@ -3,11 +3,19 @@
     "type": "object",
     "schemaVersion": 1,
     "properties": {
+        "startUrl": {
+            "title": "URL",
+            "type": "string",
+            "description": "URL to start with",
+            "editor": "textfield",
+            "prefill": ""
+        },
         "query": {
             "title": "Query",
             "type": "string",
             "description": "Job Title, Keywords, or Company",
-            "editor": "textfield"
+            "editor": "textfield",
+            "prefill": "CEO"
         },
         "location": {
             "title": "Location",

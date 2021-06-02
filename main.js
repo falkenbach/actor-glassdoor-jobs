@@ -11,6 +11,7 @@ Apify.main(async () => {
     const input = await Apify.getInput();
     // INPUTS
     const {
+        startUrl,
         proxy,
         query,
         maxResults,
@@ -29,18 +30,32 @@ Apify.main(async () => {
     if (typeof query !== 'string') {
         throw new Error('WRONG INPUT: must contain `query` field as string');
     }
+
+    if (startUrl && query) {
+        log.info('WARNING: You provided in input both "URL" and "query" fields. Only query parameters from "URL" field would be used in the actor.')
+    }
+
+    if (startUrl && !startUrl.includes('/Job/jobs.htm?sc.keyword=')) {
+        throw new Error('WRONG INPUT: invalid URL to start with. URL should be "Search" page with the results of job offers on it (i.e. https://www.glassdoor.com/Job/jobs.htm?sc.keyword=Front%20End%20Engineer&suggestCount=0&suggestChosen=false&clickSource=searchBox).')
+    }
     // const proxyUrl = proxyConfiguration ? proxyConfiguration.newUrl() : undefined;
     // DEALING WITH LOCATION
     // location is optional, if specified we need to get available options from location search
     let foundLocation = '';
-    if (location) {
+    if (location && !startUrl) {
         foundLocation = await findGlassdoorLocation(location, locationstate, proxyConfiguration);
     }
     // if no limit for results, then parse it from the initial search
     const maximumResults = maxResults > 0 ? maxResults : -1;
     const requestQueue = await Apify.openRequestQueue();
     // FIRST PAGE WITH THE SEARCH RESULTS
-    const searchUrl = new URL(`/Job/jobs.htm?sc.keyword=${query}${foundLocation}&srs=RECENT_SEARCHES`, BASE_URL);
+    let searchUrl;
+    if (startUrl) {
+        searchUrl = startUrl;
+    } else {
+        searchUrl = new URL(`/Job/jobs.htm?sc.keyword=${query}${foundLocation}&srs=RECENT_SEARCHES`, BASE_URL);
+    }
+
     await requestQueue.addRequest({
         url: searchUrl.toString(),
         userData: {
@@ -58,7 +73,7 @@ Apify.main(async () => {
         maxConcurrency: 20,
         useSessionPool: true,
         // SOMETIMES IT FAILS TO GET NEEDED JSON FROM THE PAGE => INCREASED RETRIES
-        maxRequestRetries: 7,
+        maxRequestRetries: 10,
         handleRequestFunction: async (context) => {
             const { url, userData: { label } } = context.request;
             log.info('Page opened.', { label, url });

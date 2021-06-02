@@ -27,7 +27,6 @@ const searchJobs = async ({ request, session }, requestQueue, proxyConfiguration
             salary: $(el).find('span[data-test="detailSalary"]').text().trim(),
         };
     };
-    log.info(`savedItems: ${savedItems}`);
     // CHECK FOR THE LAST PAGE
     let currentPage;
     let maxPage;
@@ -99,7 +98,7 @@ const searchJobs = async ({ request, session }, requestQueue, proxyConfiguration
     // ONE JOB CAN BE REPRESENTED IN DIFFERENT LOCATIONS.
     if (savedItems >= maximumResults || currentPage === maxPage) {
         const checkUnique = [...new Set(searchResults.map((x) => x.id))];
-        log.info(`Found ${checkUnique.length} unique listings out of ${searchResults.length} in total`);
+        log.info(`Found ${checkUnique.length} unique job offers out of ${searchResults.length} in total. Adding to the queue URLs with the job offers.`);
         for (const item of searchResults) {
             await requestQueue.addRequest({
                 url: item.url,
