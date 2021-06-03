@@ -69,7 +69,7 @@ const parseJobs = async ({ request, session }, proxyConfiguration) => {
         yearFounded: jsonCompanyInfo.initialState?.jlData?.overview?.yearFounded ?? null,
     };
 
-    log.info(`Saving details for job listing id ${request.uniqueKey}`);
+    log.info(`Saving details for job with ID: ${request.uniqueKey}`);
     // SAVING FINAL DATA
     await Apify.pushData({
         ...item,
