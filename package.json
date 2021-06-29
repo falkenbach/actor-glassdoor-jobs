@@ -3,11 +3,9 @@
 	"version": "0.0.1",
 	"description": "This is a boilerplate of an Apify actor.",
 	"dependencies": {
-		"apify": "^1.2.0",
-		"@apify/http-request": "^2.1.2",
-		"cheerio": "^1.0.0-rc.9",
-		"html-entities": "^1.2.1",
-		"request-promise": "^4.2.6"
+		"apify": "^1.2.1",
+		"cheerio": "^1.0.0-rc.10",
+		"html-entities": "^1.2.1"
 	},
 	"devDependencies": {
 		"@apify/eslint-config": "^0.1.3",
