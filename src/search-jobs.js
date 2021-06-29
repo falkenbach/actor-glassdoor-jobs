@@ -13,7 +13,6 @@ const searchJobs = async ({ request, session }, requestQueue, proxyConfiguration
     let $;
     // FUNCTION TO MAP JOB ELEMS ON THE PAGE
     const mapJobListItem = (i, el) => {
-        // const employerRating = parseFloat($($($(el).find('div')[0]).find('span')[1]).text());
         const employerRating = parseFloat($(el).find('div:eq(0) span:eq(1)').first().text());
         return {
             id: $(el).data('id'),
@@ -80,7 +79,7 @@ const searchJobs = async ({ request, session }, requestQueue, proxyConfiguration
         log.debug('Error on getting last page.', { message: e.message, stack: e.stack });
         throw new Error('Failed to get number of the last page, will try again...');
     }
-        if (currentPage <= maxPage) {
+        if (currentPage < maxPage) {
             await requestQueue.addRequest({
                 url: nextPage,
                 userData: {

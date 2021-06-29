@@ -27,7 +27,7 @@ Apify.main(async () => {
     if (Apify.isAtHome() && !proxyConfiguration) {
         throw new Error('WRONG INPUT: This actor must use Apify proxy or custom proxies when running on Apify platform!');
     }
-    if (typeof query !== 'string') {
+    if (query && typeof query !== 'string') {
         throw new Error('WRONG INPUT: must contain `query` field as string');
     }
 
@@ -36,7 +36,7 @@ Apify.main(async () => {
     }
 
     if (startUrl && !startUrl.includes('/Job/jobs.htm?sc.keyword=')) {
-        throw new Error('WRONG INPUT: invalid URL to start with. URL should be "Search" page with the results of job offers on it (i.e. https://www.glassdoor.com/Job/jobs.htm?sc.keyword=Front%20End%20Engineer&suggestCount=0&suggestChosen=false&clickSource=searchBox).')
+        throw new Error('WRONG INPUT: invalid URL to start with. URL should be "Search" page with the job offers on it \n(i.e. https://www.glassdoor.com/Job/jobs.htm?sc.keyword=Front%20End%20Engineer&suggestCount=0&suggestChosen=false&clickSource=searchBox).')
     }
     // const proxyUrl = proxyConfiguration ? proxyConfiguration.newUrl() : undefined;
     // DEALING WITH LOCATION
