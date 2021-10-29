@@ -35,8 +35,8 @@ Apify.main(async () => {
         log.warning('You provided in input both "URL" and "query" fields. Only start URL will be used in actor.')
     }
 
-    if (startUrl && !startUrl.includes('/Job/jobs.htm?sc.keyword=')) {
-        throw new Error('WRONG INPUT: invalid URL to start with. URL should be "Search" page with the job offers on it \n(i.e. https://www.glassdoor.com/Job/jobs.htm?sc.keyword=Front%20End%20Engineer&suggestCount=0&suggestChosen=false&clickSource=searchBox).')
+    if (startUrl && !startUrl.includes('/Job/')) {
+        throw new Error('WRONG INPUT: invalid URL to start with. URL should be "Search" page with the job offers on it \n(i.e. https://www.glassdoor.com/Job/front-end-engineer-jobs-SRCH_KO0,18.htm).')
     }
     // const proxyUrl = proxyConfiguration ? proxyConfiguration.newUrl() : undefined;
     // DEALING WITH LOCATION
