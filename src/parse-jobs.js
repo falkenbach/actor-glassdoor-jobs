@@ -17,14 +17,29 @@ const parseJobs = async ({ request, session }, proxyConfiguration) => {
     const $ = cheerio.load(rq.body);
     // GETTING INFO FROM THE PAGE
     let clearDetails = $('#JobDescriptionContainer').text().trim(); // but no artifacts from html decoding here
-    let script = $('#JobView script').html();
+    
+    // GETTING SCRIPT  WITH JSON
+    const allScriptsArray = $("script");
+    const allScriptsText = [];
+    allScriptsArray.each((index, el) => {
+        const text = $(el).html().trim();
+        allScriptsText.push(text);
+    });
+    let neededScript = null;
+    allScriptsText.map((el) => {
+        if (el.includes("window.appCache=")) {
+            neededScript = el;
+    }
+    });
+
+    let jsonCompanyInfo;
     try {
-        script = script.replace('window.appCache=', '').slice(0, -1);
+        neededScript = neededScript.replace('window.appCache=', '').slice(0, -1);
+        jsonCompanyInfo = JSON.parse(neededScript);        
     } catch (e) {
         log.debug('Error on getting JSON', { message: e.message, stack: e.stack });
-        throw new Error('The page didnt load properly, will try again...');
+        throw new Error('Page didn\'t load properly, will try again...');
     }
-    const jsonCompanyInfo = JSON.parse(script);        
 
     if (!clearDetails) {
         // so for now second option will be used as jobDetails, decoding below was for json.description
