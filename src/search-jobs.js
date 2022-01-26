@@ -72,13 +72,13 @@ const searchJobs = async ({ request, session }, requestQueue, proxyConfiguration
         } else {
             page += 1;
         }
-        currentPage = +$('div[data-test="page-x-of-y"]').text().replace('Page', '').split('of')[0].trim();
-    try {
-        maxPage = +$('div[data-test="page-x-of-y"]').text().replace('Page', '').split('of')[1].trim();
-    } catch (e) {
-        log.debug('Error on getting last page.', { message: e.message, stack: e.stack });
-        throw new Error('Failed to get number of the last page, will try again...');
-    }
+        currentPage = +$('.paginationFooter').text().replace('Page', '').split('of')[0].trim();
+        try {
+            maxPage = +$('.paginationFooter').text().replace('Page', '').split('of')[1].trim();
+        } catch (e) {
+            log.debug('Error on getting last page.', { message: e.message, stack: e.stack });
+            throw new Error('Failed to get number of the last page, will try again...');
+        }
         if (currentPage < maxPage) {
             await requestQueue.addRequest({
                 url: nextPage,

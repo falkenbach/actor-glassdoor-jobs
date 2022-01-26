@@ -1,5 +1,9 @@
 ## 2021-10-28
 *Improvements*
+- SDK update to 2.2.1.
+
+## 2021-10-28
+*Improvements*
 - SDK update to 2.1.0.
 
 ## 2021-05-24
