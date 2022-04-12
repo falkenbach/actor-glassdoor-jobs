@@ -1,6 +1,6 @@
 # Actor - Glassdoor jobs scraper
 
-## Glassdoor jobs, salaries, companies and reviews scraper
+## Why use our Glassdoor API?
 
 Glassdoor crawler provides more data than Glassdoor API and publicly available. Official API only provides search for companies and only to partners, while this actor will provide you with full details about available jobs either from direct search for jobs or by parsing opened jobs positions from companies search. No login required so you can collect this data without exposing your Glassdoor account.
 
