@@ -7,7 +7,7 @@
             "title": "URL",
             "type": "string",
             "description": "URL to start with",
-            "editor": "stringList",
+            "editor": "textfield",
             "prefill": "",
             "pattern": "https:\\/\\/(www\\.)?glassdoor\\.com\\/Job.+"
         },
