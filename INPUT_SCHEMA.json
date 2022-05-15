@@ -8,7 +8,8 @@
             "type": "string",
             "description": "URL to start with",
             "editor": "textfield",
-            "prefill": ""
+            "prefill": "",
+            "patternValue": "https:\\/\\/(www\\.)?glassdoor\\.com\\/Job.+"
         },
         "query": {
             "title": "Query",
