@@ -9,7 +9,7 @@
             "description": "URL to start with",
             "editor": "requestListSources",
             "prefill": "",
-            "patternValue": "https:\\/\\/(www\\.)?glassdoor\\.com\\/Job.+"
+            "pattern": "https:\\/\\/(www\\.)?glassdoor\\.com\\/Job.+"
         },
         "query": {
             "title": "Query",
