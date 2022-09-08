@@ -36,7 +36,8 @@
             "title": "Maximum results",
             "type": "integer",
             "description": "Limit number of results",
-            "minimum": 0
+            "minimum": 0,
+            "prefill": 30
         },
         "proxy": {
             "title": "Proxy configuration",
