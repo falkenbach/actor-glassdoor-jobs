@@ -1,4 +1,3 @@
-/* eslint-disable linebreak-style */
 const BASE_URL = 'https://www.glassdoor.com';
 
 // AS WE ARE USING LATEST VERSION OF SDK (WITH GOT-SCRAPING) WE DON'T NEED ANY HEADERS (NEED TO CHECK)
