@@ -36,10 +36,6 @@ Actor.main(async () => {
         log.warning('You provided in input both "URL" and "query" fields. Only start URL will be used in actor.');
     }
 
-    if (startUrl && !startUrl.includes('/Job/')) {
-        throw new Error('WRONG INPUT: invalid URL to start with. URL should be "Search" page with the job offers on it \n(i.e. https://www.glassdoor.com/Job/front-end-engineer-jobs-SRCH_KO0,18.htm).');
-    }
-
     const startUrls = [];
 
     // DEALING WITH LOCATION
@@ -54,27 +50,29 @@ Actor.main(async () => {
     if (startUrl) {
         searchUrl = startUrl;
     } else {
-        searchUrl = new URL(`/Job/jobs.htm?sc.keyword=${query}${foundLocation}&srs=RECENT_SEARCHES`, BASE_URL);
+        const slug = query.toLowerCase().split(' ').join('-');
+        searchUrl = new URL(`/Job/${slug}-jobs-SRCH_KO0,13.htm`, BASE_URL);
     }
 
+    const url = searchUrl.toString();
     startUrls.push({
-        url: searchUrl.toString(),
+        url,
         userData: {
             page: 1,
-            label: 'SEARCH-JOBS',
+            label: url.startsWith('https://www.glassdoor.com/Job/') ? 'SEARCH-JOBS' : 'PARSE-DETAILS',
         },
     });
     // CRAWLER
     const crawler = new CheerioCrawler({
         maxRequestRetries: 5,
         requestHandler: async (context) => {
-            const { url, userData: { label } } = context.request;
-            log.info('Page opened.', { label, url });
+            const { userData: { label } } = context.request;
+            log.info(`${label} opened: ${context.request.url}`, { label, url });
             // eslint-disable-next-line default-case
             switch (label) {
                 case 'SEARCH-JOBS':
                     return searchJobs(context, input);
-                case 'PARSE-JOBS':
+                case 'PARSE-DETAILS':
                     return parseJobs(context);
             }
         },

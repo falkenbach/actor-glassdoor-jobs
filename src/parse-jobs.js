@@ -17,9 +17,9 @@ const parseJobs = async ({ request, $ }) => {
         '@type': undefined,
     };
 
-    log.info(`Saving details for job with ID: ${item.id}`);
+    log.info(`Saving details: ${item?.id || request.url}`);
     // SAVING FINAL DATA
-    await Actor.pushData({
+    await Actor.pushData(Array.isArray(jsonCompanyInfo) ? jsonCompanyInfo : {
         ...item,
         ...moreDetails,
     });
