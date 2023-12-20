@@ -36,8 +36,9 @@ const searchJobs = async ({ request, $, crawler }, { maxResults }) => {
     const availableResults = json.jobListings.length * json.paginationCursors.length;
     log.info(`Available up to ${availableResults} results out of ${json.totalJobsCount} search items`);
 
-    const items = json.jobListings?.map(mapJobListItem).slice(0, maxResults && counter > maxResults ? maxResults - itemsCounter : undefined) || [];
+    let items = json.jobListings?.map(mapJobListItem).slice(0, maxResults && counter > maxResults ? maxResults - itemsCounter : undefined) || [];
     const counter = itemsCounter + items.length;
+    items = items.slice(0, maxResults && counter > maxResults ? maxResults - itemsCounter : undefined);
 
     await crawler.addRequests(items.map((x) => {
         return {

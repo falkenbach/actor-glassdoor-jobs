@@ -66,6 +66,7 @@ Actor.main(async () => {
     });
     // CRAWLER
     const crawler = new CheerioCrawler({
+        maxRequestRetries: 5,
         requestHandler: async (context) => {
             const { url, userData: { label } } = context.request;
             log.info('Page opened.', { label, url });
