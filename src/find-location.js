@@ -1,7 +1,6 @@
-/* eslint-disable linebreak-style */
 const Apify = require('apify');
 
-const { log } = Apify.utils;
+const { log } = Apify;
 
 const findGlassdoorLocation = async (locationText, locationState, proxyConfiguration) => {
     // results limited to 1 since we will not use more than 1
